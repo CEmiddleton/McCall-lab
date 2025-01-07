@@ -1,0 +1,84 @@
+csv_file_path <- "C:/Users/caitl/OneDrive/Desktop/Toxoplasma/Correlation plots/PB_15_median_distances.csv"
+> data <- read.csv(csv_file_path, header = TRUE, stringsAsFactors = FALSE)
+> 
+>  var1='kynurenine'
+> 
+> var1='PB'
+> var2='Median'
+> cor_coef <- cor(data[[var1]], data[[var2]], use = "complete.obs", method = "pearson")
+> plot <- ggplot(data, aes(x = .data[[var1]], y = .data[[var2]])) +
++     geom_point(color = "black", alpha = 0.8) +
++     geom_smooth(method = "lm", color = "gray1", fill = "lightgray", se = TRUE) +  # Add shaded confidence intervals
++     labs(
++         x = "Parasite Burden day 15",
++         y = "Median distance between uninfected and infected"
++     ) +
++     theme_minimal() +
++     theme(
++         panel.grid.major = element_blank(),  # Remove major grid lines
++         panel.grid.minor = element_blank(),  # Remove minor grid lines
++         axis.line = element_line(color = "black")  # Keep axis lines
++     ) 
+> 
+> 
+> 
+> plot <- plot + theme(plot.margin = unit(c(1, 1, 1.5, 1), "cm"))
+> print(plot)
+
+
+
+8/26/2024:
+
+csv_file_path <- "C:/Users/caitl/OneDrive/Desktop/Toxoplasma/Correlation plots/kyn_50_median_distances.csv"
+> data <- read.csv(csv_file_path, header = TRUE, stringsAsFactors = FALSE)
+> var1='kynurenine'
+> var2='median'
+> cor_coef <- cor(data[[var1]], data[[var2]], use = "complete.obs", method = "pearson")
+> plot <- ggplot(data, aes(x = .data[[var1]], y = .data[[var2]])) +
++     geom_point(color = "black", alpha = 0.8) +
++     geom_smooth(method = "lm", color = "gray1", fill = "lightgray", se = TRUE) + 
++     labs(
++         x = "Kynurenine day 15",
++         y = "Median distance between uninfected and infected"
++     ) +
++     theme_minimal() +
++     theme(
++         panel.grid.major = element_blank(),  # Remove major grid lines
++         panel.grid.minor = element_blank(),  # Remove minor grid lines
++         axis.line = element_line(color = "black"),  # Keep axis lines
++         axis.title = element_text(size = 14)  # Increase the size of axis labels
++     )
+> plot <- plot + theme(plot.margin = unit(c(1, 1, 1.5, 1), "cm"))
+> print(plot)
+
+
+8/28/2024:
+plot <- ggplot(data, aes(x = .data[[var1]], y = .data[[var2]])) +
+     geom_point(color = "black", alpha = 0.8) +
+    geom_smooth(method = "lm", color = "gray1", fill = "lightgray", se = TRUE) +
+     labs(x = "Parasite Burden day 15", y = "Median distance between uninfected and infected") +
+     theme_minimal() +
+     theme(
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(color = "black"),
+        axis.title = element_text(size = 13)
+    )
+> 
+> plot <- plot + theme(plot.margin = unit(c(1, 1, 1.5, 1), "cm"))
+> print(plot)
+
+
+09/04/2024:
+
+plot <- ggplot(data, aes(x = .data[[var1]], y = .data[[var2]])) +
+    geom_point(color = "black", alpha = 1.0) +
+    geom_smooth(method = "lm", color = "gray1", fill = "lightgray", se = TRUE) +
+    labs(x = "Parasite Burden day 15", y = "Median distance between uninfected and infected") +
+    theme_minimal() +
+    theme(
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(color = "black"),
+        axis.title = element_text(size = 22) ,axis.text = element_text(size = 18)
+    )
