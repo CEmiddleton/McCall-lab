@@ -1,0 +1,81 @@
+library(ggplot2)
+
+setwd("C:/Users/caitl/OneDrive/Desktop/Toxoplasma/Distance analysis (QIIIME)/boxplots")
+df <- read.csv("Distances_WT_IL1R.csv", stringsAsFactors = FALSE)
+
+# Subset to the organ of interest
+df_Liver <- subset(df, Group %in% c("Liver_WT", "Liver_IL1RKO"))
+
+df_Liver$Genotype <- factor(df_Liver$Genotype, levels = c("WT", "IL1RKO"))
+
+# Compute Wilcoxon, HL (with 95% CI), and CLES 
+x <- with(df_Liver, Distance[Genotype == "WT"])
+y <- with(df_Liver, Distance[Genotype == "IL1RKO"])
+
+wt <- suppressWarnings(
+  wilcox.test(x, y, conf.int = TRUE, conf.level = 0.95, exact = FALSE)
+)
+
+# Hodges–Lehmann estimate and CI (WT - IL1RKO)
+hl_est  <- unname(wt$estimate)
+hl_low  <- wt$conf.int[1]
+hl_high <- wt$conf.int[2]
+pval    <- wt$p.value
+
+# CLES: probability that a randomly chosen WT value > IL1RKO value
+n1 <- sum(!is.na(x)); n2 <- sum(!is.na(y))
+ranks <- rank(c(x, y), ties.method = "average")
+W     <- sum(ranks[seq_len(n1)])
+U     <- W - n1 * (n1 + 1) / 2
+cles  <- U / (n1 * n2)
+
+
+lab <- sprintf(
+  "Wilcoxon p = %.3g | HL (WT - IL1RKO) = %.3f [%.3f, %.3f] | CLES WT>IL1RKO = %.2f",
+  pval, hl_est, hl_low, hl_high, cles
+)
+
+
+y_max <- max(df_Liver$Distance, na.rm = TRUE)
+
+# Plot 
+p <- ggplot(df_Liver, aes(x = Group, y = Distance, fill = Genotype)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7, width = 0.75) +
+  geom_jitter(aes(color = Genotype),
+              width = 0.4,
+              size = 2.5,
+              alpha = 0.6,
+              shape = 16) +
+  scale_fill_manual(values = c("IL1RKO" = "#7CAE00", "WT" = "#C77CFF")) +
+  scale_color_manual(values = c("IL1RKO" = "#7CAE00", "WT" = "#C77CFF")) +
+  labs(x = "", y = "Distances between infected and uninfected", title = "") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, size = 14),
+    axis.text.y = element_text(size = 20),
+    axis.title.y = element_text(size = 22),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank(),
+    axis.line = element_line(size = 1.2)
+  ) +
+  # Add the effect-size label as a caption (easy) ...
+  labs(caption = lab) +
+  # ...and optionally as on-plot text right above the data:
+  annotate("text",
+           x = 1.5, y = y_max * 1.08,
+           label = lab,
+           hjust = 0.5, vjust = 0,
+           size = 4)
+
+
+p <- p + expand_limits(y = y_max * 1.15)
+
+print(p)
+
+
+cat("\nWilcoxon (Liver)\n",
+    "p-value:", signif(pval, 3), "\n",
+    "HL (WT - IL1RKO):", round(hl_est, 3),
+    "  95% CI [", round(hl_low, 3), ", ", round(hl_high, 3), "]\n",
+    "CLES (WT > IL1RKO):", round(cles, 3), "\n", sep = "")
