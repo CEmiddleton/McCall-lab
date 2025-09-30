@@ -1,0 +1,130 @@
+# ---- Packages ----
+install.packages("dplyr")
+install.packages("boot")
+library(dplyr)
+library(boot)
+
+# ---- Load your data  ----
+csv_file_path <- "C:/Users/caitl/OneDrive/Desktop/Toxoplasma/Spearman correlations with confidence intervals/spearman correlations redo/ileum 15/varImp_rffit_si_illeum_features_WT_15_INF_UNINF.csv"
+RF_output <- read.csv(csv_file_path)
+features  <- read.csv("C:/Users/caitl/OneDrive/Desktop/Toxoplasma/Spearman correlations with confidence intervals/spearman correlations redo/ileum 15/SI_illeum_15.csv")
+
+# ---- Select RF-important features  ----
+MeanDecrease_bigger_than_1 <- RF_output$MeanDecreaseAccuracy > 1
+selected_rows <- RF_output[MeanDecrease_bigger_than_1, ]
+columns_to_keep <- selected_rows$X
+sig_by_RF <- features %>% select(all_of(columns_to_keep))
+
+sig_by_RF_wMeta <- cbind(features[1:14], sig_by_RF)
+
+# subsetting for genotypes
+sig_by_RF_wMeta_WT <- droplevels(
+  subset(sig_by_RF_wMeta, genotypes %in% c("WT_INF","WT_UNINF"))
+)
+
+#BCa bootstrap CI for Spearman's rho 
+spearman_boot_ci <- function(x, y, R = 2000, conf = 0.95, seed = 123) {
+  ok <- is.finite(x) & is.finite(y)
+  x <- x[ok]; y <- y[ok]
+  if (length(x) < 3) return(c(lower = NA_real_, upper = NA_real_))
+  set.seed(seed)
+  dat <- data.frame(x = x, y = y)
+  stat_fun <- function(data, idx) {
+    d <- data[idx, , drop = FALSE]
+    suppressWarnings(cor(d$x, d$y, method = "spearman"))
+  }
+  b <- boot(dat, stat_fun, R = R)
+  out <- tryCatch(
+    boot.ci(b, type = "bca", conf = conf)$bca[4:5],
+    error = function(e) c(NA_real_, NA_real_)
+  )
+  names(out) <- c("lower","upper")
+  out
+}
+
+
+# A) Correlate kynurenine (X209.091_0.47) with all other features + 95% BCa CIs
+
+
+target_col <- "X209.091_0.47"
+
+# columns to test (exclude metadata & the target itself)
+start_idx <- 14
+end_idx   <- ncol(sig_by_RF_wMeta_WT)
+data_cols <- names(sig_by_RF_wMeta_WT)[start_idx:end_idx]
+columns_to_correlate <- setdiff(data_cols, target_col)
+
+res_list <- lapply(columns_to_correlate, function(colname) {
+  x <- sig_by_RF_wMeta_WT[[target_col]]
+  y <- sig_by_RF_wMeta_WT[[colname]]
+  ok <- is.finite(x) & is.finite(y)
+  x <- x[ok]; y <- y[ok]
+  n <- length(x)
+  
+  ct <- suppressWarnings(cor.test(x, y, method = "spearman", exact = FALSE))
+  ci <- spearman_boot_ci(x, y, R = 2000, conf = 0.95)
+  
+  data.frame(
+    Column = colname,
+    n = n,
+    Spearman_rho = unname(ct$estimate),
+    p_value = ct$p.value,
+    CI_lower = ci["lower"],
+    CI_upper = ci["upper"],
+    stringsAsFactors = FALSE
+  )
+})
+
+correlation_df <- do.call(rbind, res_list)
+correlation_df$Adjusted_P_Value <- p.adjust(correlation_df$p_value, method = "fdr")
+
+write.csv(
+  correlation_df,
+  "RF_output_correlated_to_kynurenine_jejunum_15_redo_withCI.csv",
+  row.names = FALSE
+)
+
+
+# B) Correlate Combined = mean(X209.091_0.47, X192.065_0.48) with all + 95% BCa CIs
+
+
+sig_by_RF_wMeta_WT$Combined <- rowMeans(
+  sig_by_RF_wMeta_WT[, c("X209.091_0.47", "X192.065_0.48")],
+  na.rm = TRUE
+)
+
+target_col2 <- "Combined"
+columns_to_correlate2 <- setdiff(data_cols, target_col2)
+
+res_list2 <- lapply(columns_to_correlate2, function(colname) {
+  x <- sig_by_RF_wMeta_WT[[target_col2]]
+  y <- sig_by_RF_wMeta_WT[[colname]]
+  ok <- is.finite(x) & is.finite(y)
+  x <- x[ok]; y <- y[ok]
+  n <- length(x)
+  
+  ct <- suppressWarnings(cor.test(x, y, method = "spearman", exact = FALSE))
+  ci <- spearman_boot_ci(x, y, R = 2000, conf = 0.95)
+  
+  data.frame(
+    Column = colname,
+    n = n,
+    Spearman_rho = unname(ct$estimate),
+    p_value = ct$p.value,
+    CI_lower = ci["lower"],
+    CI_upper = ci["upper"],
+    stringsAsFactors = FALSE
+  )
+})
+
+correlation_df2 <- do.call(rbind, res_list2)
+correlation_df2$Adjusted_P_Value <- p.adjust(correlation_df2$p_value, method = "fdr")
+
+write.csv(
+  correlation_df2,
+  "RF_output_correlated_to_combined_kynurenine_jejunum_15_withCI.csv",
+  row.names = FALSE
+)
+
+head(correlation_df)
+head(correlation_df2)
